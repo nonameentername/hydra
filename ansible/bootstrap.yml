@@ -1,0 +1,9 @@
+---
+- hosts: all
+  user: vagrant
+  vars:
+    user: "{{ lookup('env', 'USER') }}"
+    home: "{{ lookup('env', 'HOME') }}"
+  tasks:
+    - name: Add authorized key for user
+      authorized_key: user=root key="{{ lookup('file', '/home/{{user}}/.ssh/id_rsa.pub') }}"
