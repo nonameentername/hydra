@@ -1,0 +1,17 @@
+---
+- hosts: all
+  tasks:
+    - name: add docker ppa
+      apt_repository: repo='deb https://get.docker.io/ubuntu docker main' state=present update_cache=true
+    - name: add docker key
+      apt_key: keyserver=hkp://keyserver.ubuntu.com:80 id=A88D21E9 state=present
+    - name: install docker
+      apt: name=lxc-docker-1.0.0 state=installed update_cache=true
+    - name: modify docker config
+      command: sed -i 's,DOCKER_OPTS=.*,DOCKER_OPTS=\"-d -H tcp://0.0.0.0:4243 -H unix:///var/run/docker.sock\",' /etc/init/docker.conf
+      notify:
+        - restart docker
+
+  handlers:
+   - name: restart docker
+     service: name=docker state=restarted
