@@ -1,0 +1,10 @@
+---
+- hosts: all
+  sudo: true
+  tasks: 
+    - name: Install wget
+      apt: name=wget state=installed update_cache=true
+    - name: Go to the folder
+      command: chdir=/opt/tools/temp
+    - name: Download surf
+      command: wget https://dl.bintray.com/mitchellh/serf/0.6.3_linux_amd64.zip
