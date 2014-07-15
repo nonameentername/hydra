@@ -1,0 +1,16 @@
+---
+- name: install openvswitch-common
+  sudo: true
+  apt: name=openvswitch-common state=present
+
+- name: install openvswitch-datapath-dkms
+  sudo: true
+  apt: name=openvswitch-datapath-dkms state=present
+
+- name: install openvswitch-switch
+  sudo: true
+  apt: name=openvswitch-switch state=present
+
+- name: install bridge-utils
+  sudo: true
+  apt: name=bridge-utils state=present
