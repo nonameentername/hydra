@@ -2,6 +2,9 @@
 - name: Install unzip
   apt: name=unzip state=present
 
+- name: Install supervisor
+  apt: name=supervisor
+
 - name: Download serf
   get_url:
     url=https://dl.bintray.com/mitchellh/serf/{{version}}_linux_amd64.zip
@@ -15,3 +18,9 @@
 - name: Unzip serf
   command: unzip /tmp/{{version}}_linux_amd64.zip -d /usr/local/bin/
   when: serf.stat.exists == false
+
+- name: Copy supervisord-serf.conf
+  copy: src=supervisord-serf.conf dest=/etc/supervisor/conf.d/supervisord-serf.conf mode=0755
+
+- name: Retart supervisor
+  service: name=supervisor state=restarted
