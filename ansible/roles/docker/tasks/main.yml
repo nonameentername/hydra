@@ -6,7 +6,7 @@
   apt_key: keyserver=hkp://keyserver.ubuntu.com:80 id=A88D21E9 state=present
 
 - name: install docker
-  apt: name=lxc-docker-1.0.0 state=installed update_cache=true
+  apt: name=lxc-docker-{{version}} state=installed update_cache=true
 
 #- name: check docker config
 #  command: grep 'DOCKER_OPTS="' /etc/init/docker.conf
