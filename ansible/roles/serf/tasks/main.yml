@@ -16,7 +16,7 @@
   changed_when: false
 
 - name: Unzip serf
-  command: unzip /tmp/{{version}}_linux_amd64.zip -d /usr/local/bin/
+  unarchive: src=/tmp/{{version}}_linux_amd64.zip  dest=/usr/local/bin copy=false
   when: serf.stat.exists == false
 
 - name: Copy supervisord-serf.conf

@@ -1,7 +1,0 @@
----
-  vars:
-    user: "{{ lookup('env', 'REMOTE_USER') }}"
-    key: "{{ lookup('env', 'REMOTE_KEY') }}"
-  tasks:
-    - name: Add authorized key for user
-      authorized_key: user="{{user}}" key="{{key}}" state=present

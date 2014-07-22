@@ -1,0 +1,3 @@
+---
+user: "{{ lookup('env', 'REMOTE_USER') }}"
+key: "{{ lookup('env', 'REMOTE_KEY') }}"
