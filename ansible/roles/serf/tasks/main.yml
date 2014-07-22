@@ -20,7 +20,9 @@
   when: serf.stat.exists == false
 
 - name: Copy supervisord-serf.conf
-  copy: src=supervisord-serf.conf dest=/etc/supervisor/conf.d/supervisord-serf.conf mode=0755
+  template: src=supervisord-serf.conf.j2 dest=/etc/supervisor/conf.d/supervisord-serf.conf mode=0755
 
-- name: Retart supervisor
-  service: name=supervisor state=restarted
+- name: Reload supervisor config
+  command: supervisorctl update
+  register: reread_result
+  changed_when: reread_result == ''

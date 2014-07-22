@@ -1,4 +1,16 @@
-[all]
+[router]
 192.168.10.100
+
+[node]
 192.168.10.101
 192.168.10.102
+
+[all:children]
+router
+node
+
+[router:vars]
+serf_role=router
+
+[node:vars]
+serf_role=node
