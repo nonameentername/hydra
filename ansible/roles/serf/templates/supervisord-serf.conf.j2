@@ -1,5 +1,5 @@
 [program:serf]
-command=serf agent -tag role=serf-agent
+command=serf agent -tag role={{serf_role}}
 numprocs=1
 autostart=true
 autorestart=true
