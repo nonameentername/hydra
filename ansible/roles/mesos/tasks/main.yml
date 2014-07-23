@@ -1,0 +1,102 @@
+---
+# Mesos requires a lot of memory to compile. 4GB or more.
+- name: apt-get update
+  sudo: true
+  apt: update_cache=yes
+
+- name: Install build-essential
+  sudo: true
+  apt: name=build-essential state=present
+
+- name: Install autoreconf
+  sudo: true
+  apt: name=dh-autoreconf state=present
+
+- name: Install OpenJDK java
+  sudo: true
+  apt: name=openjdk-{{java_version}}-jdk state=present
+
+- name:  Install devel python.
+  sudo: true
+  action: apt pkg={{item}} state=installed
+  with_items:
+  - python-dev
+  - python-boto
+
+- name: Install devel libcurl
+  sudo: true
+  apt: name=libcurl4-nss-dev state=present
+
+- name: Install devel libsasl
+  sudo: true
+  apt: name=libsasl2-dev state=present
+
+- name: Install Maven
+  sudo: true
+  apt: name=maven state=present
+
+- name: Check for mesos tar file
+  stat: path=/tmp/mesos-{{version}}.tar.gz
+  register: mesos_tar_file
+  changed_when: false
+
+- name: Download mesos
+  get_url:
+    url=http://www.apache.org/dist/mesos/{{version}}/mesos-{{version}}.tar.gz
+    dest=/tmp
+  when: mesos_tar_file.stat.exists == false
+
+- name: Check for mesos directory
+  stat: path=/mesos
+  register: mesos_dir
+  changed_when: false
+
+- name: Untar mesos
+  unarchive: src=/tmp/mesos-{{version}}.tar.gz dest=/ copy=false
+  when: mesos_dir.stat.exists == false
+
+- name: Move directory
+  command: mv /mesos-{{version}} /mesos
+  when: mesos_dir.stat.exists == false
+
+- name: Check for mesos directory
+  stat: path=/mesos/build
+  register: mesos_build_dir
+  changed_when: false
+
+- name: Make build directory
+  command: mkdir /mesos/build
+  when: mesos_build_dir.stat.exists == false
+
+- name: Check configure status
+  stat: path=/mesos/build/Makefile
+  register: config_status
+
+- name: Configure build directory
+  sudo: true
+  command: ../configure
+  args:
+    chdir: /mesos/build/
+  when: config_status.stat.exists == false
+
+- name: Make
+  sudo: true
+  command: make
+  register: make_results
+  args:
+   chdir: /mesos/build/
+  changed_when: "make_results.stdout.find('Nothing to be done') == -1"
+
+- name: Make check
+  sudo: true
+  command: make check
+  args:
+   chdir: /mesos/build/
+  ignore_errors: yes
+  when: false
+
+- name: Install
+  sudo: true
+  command: make install
+  args:
+   chdir: /mesos/build/
