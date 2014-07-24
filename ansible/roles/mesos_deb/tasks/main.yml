@@ -1,0 +1,54 @@
+---
+- name: apt-get update
+  apt: update_cache=yes
+
+- name: Install list of packages
+  action: apt pkg={{item}} state=installed
+  with_items:
+  - curl
+  - default-jre
+  - python-protobuf
+  - python-setuptools
+  - zookeeperd
+
+- name: Check for mesos deb package
+  stat: path=/mesos_{{version}}-1.0.ubuntu1404_amd64.deb
+  register: mesos_deb
+
+- name: Get mesos deb package
+  get_url:
+    url=http://downloads.mesosphere.io/master/ubuntu/{{ubuntu_version}}/mesos_{{version}}-1.0.ubuntu1404_amd64.deb
+    dest=/
+  when: mesos_deb.stat.exists == false
+
+- name: Install mesos
+  apt: deb=/mesos_{{version}}-1.0.ubuntu1404_amd64.deb
+
+- name: Check for mesos egg
+  stat: path=/mesos-{{version}}-py2.7-linux-x86_64.egg
+  register: mesos_egg
+
+- name: Get mesos python egg
+  get_url:
+    url=http://downloads.mesosphere.io/master/ubuntu/{{ubuntu_version}}/mesos-{{version}}-py2.7-linux-x86_64.egg
+    dest=/
+  when: mesos_egg.stat.exists == false
+
+- name: Check if mesos is installed
+  stat: path=/usr/local/bin/mesos
+  register: mesos
+
+- name: Install mesos pthyon egg
+  command: easy_install /mesos-{{version}}-py2.7-linux-x86_64.egg
+  sudo: true
+  when: mesos.stat.exists == false
+
+- name: Restart server
+  shell: reboot
+  sudo: true
+  when: mesos.stat.exists == false
+
+- name: waiting for server to come back
+  local_action: wait_for host={{ inventory_hostname }} port=22 state=started
+  sudo: false
+  when: mesos.stat.exists == false
