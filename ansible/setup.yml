@@ -1,8 +1,8 @@
 ---
 - hosts: all
   roles:
-    - docker
     - openvswitch
+    - docker
+    - mesos
     - pyenv
     - serf
-    - mesos

@@ -2,10 +2,10 @@
 - hosts: all[0]
   tasks:
     - name: get the ip address
-      command: echo {{ ansible_eth0.ipv4.address }}
+      command: echo {{ ansible_eth1.ipv4.address }}
       changed_when: false
 
 - hosts: all:!all[0]
   tasks:
     - name: join the cluster
-      command: serf join {{ hostvars[groups['all'][0]].ansible_eth0.ipv4.address }}
+      command: serf join {{ hostvars[groups['all'][0]].ansible_eth1.ipv4.address }}

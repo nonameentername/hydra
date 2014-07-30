@@ -1,4 +1,10 @@
 ---
+- name: install lxc
+  apt: name=lxc state=installed update_cache=true
+
+- name: upgrade dist
+  apt: upgrade=dist update_cache=true
+
 - name: add docker ppa
   apt_repository: repo='deb https://get.docker.io/ubuntu docker main' state=present update_cache=true
 
@@ -8,13 +14,41 @@
 - name: install docker
   apt: name=lxc-docker-{{version}} state=installed update_cache=true
 
+- name: deactivate the docker bridge
+  command: ip link set {{bridge_name}} down
+
+- name: remove the docker bridge
+  command: brctl delbr {{bridge_name}}
+
+- name: add the docker bridge
+  command: brctl addbr {{bridge_name}}
+
+- name: setup the ip for the docker bridge
+  command: ip a add {{bridge_address}} dev {{bridge_name}}
+
+- name: activate the bridge
+  command: ip link set {{bridge_name}} up
+
+- name: Enable NAT
+  command: iptables -t nat -A POSTROUTING -s {{nat_address}} ! -d {{nat_address}} -j MASQUERADE
+
+- name: Accept incoming packets for existing connections
+  command: iptables -A FORWARD -o {{bridge_name}} -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+- name: Accept all non-intercontainer outgoing packets
+  command: iptables -A FORWARD -i {{bridge_name}} ! -o {{bridge_name}} -j ACCEPT
+
+- name: By default allow all outgoing traffic
+  command: iptables -A FORWARD -i {{bridge_name}} -o {{bridge_name}} -j ACCEPT
+
 #- name: check docker config
 #  command: grep 'DOCKER_OPTS="' /etc/init/docker.conf
 #  register: update_config
 #  changed_when: false
 
-#- name: modify docker config
-#  command: sed -i 's,DOCKER_OPTS=.*,DOCKER_OPTS=\"-d -H tcp://0.0.0.0:4243 -H unix:///var/run/docker.sock\",' /etc/init/docker.conf
-#  when: update_config == ''
-#  notify:
-#    - restart docker
+- name: modify docker config
+  command: sed -i 's,DOCKER_OPTS=.*,DOCKER_OPTS=\"-d -e lxc --bridge=docker0 -H unix:///var/run/docker.sock\",' /etc/init/docker.conf
+  #when: update_config == ''
+  when: true
+  notify:
+    - restart docker

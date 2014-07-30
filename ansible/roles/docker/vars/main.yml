@@ -1,2 +1,5 @@
 ---
 version: 1.0.0
+bridge_name: docker0
+bridge_address: 172.16.42.1/24
+nat_address: 172.16.42.0/24

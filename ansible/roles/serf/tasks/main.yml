@@ -22,7 +22,10 @@
 - name: Copy supervisord-serf.conf
   template: src=supervisord-serf.conf.j2 dest=/etc/supervisor/conf.d/supervisord-serf.conf mode=0755
 
+- name: Copy openvswitch-handler.sh
+  copy: src=openvswitch-handler.sh dest=/openvswitch-handler.sh mode=0755
+
 - name: Reload supervisor config
   command: supervisorctl update
-  register: reread_result
-  changed_when: reread_result == ''
+  register: update_result
+  changed_when: update_result == ''
