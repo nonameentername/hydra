@@ -1,5 +1,5 @@
 [program:serf]
-command=serf agent -tag role={{serf_role}}
+command=serf agent -tag role={{serf_role}} -event-handler=/openvswitch-handler.sh
 numprocs=1
 autostart=true
 autorestart=true

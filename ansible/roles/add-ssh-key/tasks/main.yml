@@ -1,4 +1,3 @@
 ---
 - name: Add authorized key for user
-  sudo: yes
   authorized_key: user="{{user}}" key="{{key}}" state=present
