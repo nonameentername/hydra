@@ -1,102 +1,148 @@
 ---
-# Mesos requires a lot of memory to compile. 4GB or more.
 - name: apt-get update
-  sudo: true
   apt: update_cache=yes
 
-- name: Install build-essential
-  sudo: true
-  apt: name=build-essential state=present
+- name: check for mesos repo list
+  stat: path=/etc/apt/sources.list.d/mesosphere.list
+  register: list
 
-- name: Install autoreconf
-  sudo: true
-  apt: name=dh-autoreconf state=present
+- name: Add mesosphere repo
+  shell: echo "deb http://repos.mesosphere.io/$(lsb_release -is | tr '[:upper:]' '[:lower:]') $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/mesosphere.list
+  when: list.stat.exists == false
 
-- name: Install OpenJDK java
-  sudo: true
-  apt: name=openjdk-{{java_version}}-jdk state=present
+- name: Add key
+  apt_key:
+    keyserver=keyserver.ubuntu.com
+    id=E56151BF
 
-- name:  Install devel python.
-  sudo: true
+- name: Install list of packages
   action: apt pkg={{item}} state=installed
   with_items:
-  - python-dev
-  - python-boto
+  - marathon
+  - deimos
+  - curl
+  - default-jre
+  - python-protobuf
+  - python-setuptools
+  - zookeeperd
 
-- name: Install devel libcurl
-  sudo: true
-  apt: name=libcurl4-nss-dev state=present
+- name: check for zookeeper
+  stat: path=/var/lib/zookeeper
+  register: zookeeper
 
-- name: Install devel libsasl
-  sudo: true
-  apt: name=libsasl2-dev state=present
+- name: configure zookeeper
+  shell: echo 1 | dd of=/var/lib/zookeeper/myid
+  when: zookeeper.stat.exists == false
 
-- name: Install Maven
-  sudo: true
-  apt: name=maven state=present
+- name: Check for mesos deb package
+  stat: path=/mesos_{{version}}-1.0.ubuntu1404_amd64.deb
+  register: mesos_deb
 
-- name: Check for mesos tar file
-  stat: path=/tmp/mesos-{{version}}.tar.gz
-  register: mesos_tar_file
-  changed_when: false
-
-- name: Download mesos
+- name: Get mesos deb package
   get_url:
-    url=http://www.apache.org/dist/mesos/{{version}}/mesos-{{version}}.tar.gz
-    dest=/tmp
-  when: mesos_tar_file.stat.exists == false
+    url=http://downloads.mesosphere.io/master/ubuntu/{{ubuntu_version}}/mesos_{{version}}-1.0.ubuntu1404_amd64.deb
+    dest=/
+  when: mesos_deb.stat.exists == false
 
-- name: Check for mesos directory
-  stat: path=/mesos
-  register: mesos_dir
+- name: Check if mesos is installed
+  stat: path=/usr/local/bin/mesos
+  register: mesos
+
+- name: Install mesos
+  apt: deb=/mesos_{{version}}-1.0.ubuntu1404_amd64.deb
+
+- name: Check for mesos egg
+  stat: path=/mesos-{{version}}-py2.7-linux-x86_64.egg
+  register: mesos_egg
+
+- name: Get mesos python egg
+  get_url:
+    url=http://downloads.mesosphere.io/master/ubuntu/{{ubuntu_version}}/mesos-{{version}}-py2.7-linux-x86_64.egg
+    dest=/
+  when: mesos_egg.stat.exists == false
+
+- name: Install mesos pthyon egg
+  command: easy_install /mesos-{{version}}-py2.7-linux-x86_64.egg
+  sudo: true
+  when: mesos.stat.exists == false
+
+- name: Restart server
+  shell: reboot
+  sudo: true
+  when: mesos.stat.exists == false
+
+- name: waiting for server to come back
+  local_action: wait_for host={{ inventory_hostname }} port=22 state=started
+  sudo: false
+  when: mesos.stat.exists == false
+
+- name: Docker service
+  service: name=docker pattern=/usr/bin/docker state=started
+
+- name: Check for docker image
+  shell: docker images | grep "libmesos/ubuntu" | awk '{print $1}' | head -n 1
+  register: image
   changed_when: false
 
-- name: Untar mesos
-  unarchive: src=/tmp/mesos-{{version}}.tar.gz dest=/ copy=false
-  when: mesos_dir.stat.exists == false
+- name: Pull docker image
+  shell: docker pull libmesos/ubuntu
+  environment:
+    PATH: /root/.pyenv/shims:/root/.pyenv/bin:{{ansible_env.PATH}}
+  when: image.stdout != "libmesos/ubuntu"
 
-- name: Move directory
-  command: mv /mesos-{{version}} /mesos
-  when: mesos_dir.stat.exists == false
+# Did not work check later; Maybe use docker_pull ansible module
+#- name: Download docker image
+#  docker_image: name=libmesos/ubuntu
+#  environment:
+#    PATH: /root/.pyenv/shims:/root/.pyenv/bin:{{ansible_env.PATH}}
 
-- name: Check for mesos directory
-  stat: path=/mesos/build
-  register: mesos_build_dir
+- name: Check mesos-master directory
+  stat: path=/etc/mesos-master
+  register: mesos_master
+
+- name: Create mesos-master directory
+  file: path=/etc/mesos-master state=directory
+  when: mesos_master.stat.exists == false
+
+- name: Check registry
+  stat: path=/etc/mesos-master/registry
+  register: registry
+
+- name: Configure mesos
+  shell: echo in_memory | dd of=/etc/mesos-master/registry
+  when: registry.stat.exists == false
+
+- name: Check mesos-slave directory
+  stat: path=/etc/mesos-slave
+  register: mesos_slave
+
+- name: Create mesos-slave directory
+  file: path=/etc/mesos-slave state=directory
+  when: mesos_slave.stat.exists == false
+
+- name: Check containerizer_path
+  stat: path=/etc/mesos-slave/containerizer_path
+  register: containerizer_path
+
+- name: Configure Deimos as a containerizer
+  shell: echo /usr/local/bin/deimos | tee /etc/mesos-slave/containerizer_path
+  when: containerizer_path.stat.exists == false
+
+- name: Check isolation
+  stat: path=/etc/mesos-slave/isolation
+  register: isolation
+
+- name: Create mesos-slave isolation
+  shell: echo external | tee /etc/mesos-slave/isolation
+  when: isolation.stat.exists == false
+
+- name: Ensure all services have started (or restarted).
+  command: "{{item}}"
+  with_items:
+    - initctl reload-configuration
+    - restart docker
+    - restart zookeeper
+    - restart marathon
+    - restart mesos-master
+    - restart mesos-slave
   changed_when: false
-
-- name: Make build directory
-  command: mkdir /mesos/build
-  when: mesos_build_dir.stat.exists == false
-
-- name: Check configure status
-  stat: path=/mesos/build/Makefile
-  register: config_status
-
-- name: Configure build directory
-  sudo: true
-  command: ../configure
-  args:
-    chdir: /mesos/build/
-  when: config_status.stat.exists == false
-
-- name: Make
-  sudo: true
-  command: make
-  register: make_results
-  args:
-   chdir: /mesos/build/
-  changed_when: "make_results.stdout.find('Nothing to be done') == -1"
-
-- name: Make check
-  sudo: true
-  command: make check
-  args:
-   chdir: /mesos/build/
-  ignore_errors: yes
-  when: false
-
-- name: Install
-  sudo: true
-  command: make install
-  args:
-   chdir: /mesos/build/

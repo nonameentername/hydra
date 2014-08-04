@@ -3,6 +3,7 @@
   roles:
     - openvswitch
     - docker
-    - mesos
     - pyenv
     - serf
+    - mesos
+#    - mesos_deb
