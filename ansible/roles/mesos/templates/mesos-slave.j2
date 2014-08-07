@@ -12,7 +12,6 @@ script
   [ -z "${ULIMIT:-}" ] || ulimit $ULIMIT
   exec /usr/local/sbin/mesos-slave \
     ${MASTER:+--master=$MASTER} \
-    ${IP:+--ip=$IP} \
     ${PORT:+--port=$PORT} \
     ${WORKDIR:+--work_dir=$WORKDIR} \
     ${ISOLATION:+--isolation=$ISOLATION} \

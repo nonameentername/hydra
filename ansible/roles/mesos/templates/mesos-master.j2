@@ -12,8 +12,9 @@ script
   [ -z "${ULIMIT:-}" ] || ulimit $ULIMIT
   exec /usr/local/sbin/mesos-master \
     ${ZK:+--zk=$ZK} \
-    ${IP:+--ip=$IP} \
     ${PORT:+--port=$PORT} \
+    ${WORKDIR:+--work_dir=$WORKDIR} \
+    ${QUORUM:+--quorum=$QUORUM} \
     ${CLUSTER:+--cluster=$CLUSTER} \
     ${WHITELIST:+--whitelist=$WHITELIST} \
     $OPTS \
