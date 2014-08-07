@@ -31,13 +31,12 @@
   template: src=mesos.j2 dest=/etc/default/mesos
 
 - name: check for zookeeper
-  shell: cat /var/lib/zookeeper/myid
+  stat: path=/var/lib/zookeeper/myid
   register: zookeeper
-  changed_when: false
 
 - name: configure zookeeper
-  shell: echo {{zookeeper_id}} | dd of=/var/lib/zookeeper/myid
-  when: zookeeper.stdout != "{{zookeeper_id}}"
+  shell: echo 1 | dd of=/var/lib/zookeeper/myid
+  when: zookeeper.stat.exists == false
 
 - name: Check registry
   stat: path=/etc/mesos-master/registry
@@ -65,20 +64,20 @@
 
 - name: Delete master script
   file: path=/etc/init/mesos-master.conf state=absent
-  when: mesos_install_mode == "master"
+  when: mesos_role == "master"
 
 - name: Delete slave script
   file: path=/etc/init/mesos-slave.conf state=absent
-  when: mesos_install_mode == "slave"
+  when: mesos_role == "slave"
 
 - name: Mesos master script
   template: src=mesos-master.j2 dest=/etc/init/mesos-master.conf
-  when: mesos_install_mode == "master"
+  when: mesos_role == "master"
   notify:
     - Restart mesos-master
 
 - name: Mesos slave script
   template: src=mesos-slave.j2 dest=/etc/init/mesos-slave.conf
-  when: mesos_install_mode == "slave"
+  when: mesos_role == "slave"
   notify:
     - Restart mesos-slave

@@ -1,9 +1,9 @@
 [router]
-192.168.10.100 mesos_install_mode="master" zookeeper_id=1
+192.168.10.100 mesos_role="master"
 
 [node]
-192.168.10.101 mesos_install_mode="slave" zookeeper_id=2
-192.168.10.102 mesos_install_mode="slave" zookeeper_id=3
+192.168.10.101 mesos_role="slave"
+192.168.10.102 mesos_role="slave"
 
 [all:children]
 router
