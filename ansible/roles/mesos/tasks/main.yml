@@ -27,8 +27,13 @@
   - python-setuptools
   - zookeeperd
 
+- name: Check mesos default config file
+  stat: path=/etc/default/mesos
+  register: default_config
+
 - name: Mesos default config file
   template: src=mesos.j2 dest=/etc/default/mesos
+  when: default_config.stat.exists == false
 
 - name: check for zookeeper
   stat: path=/var/lib/zookeeper/myid
@@ -65,10 +70,11 @@
 - name: Delete master script
   file: path=/etc/init/mesos-master.conf state=absent
   when: mesos_role == "master"
+  changed_when: false
 
 - name: Delete slave script
   file: path=/etc/init/mesos-slave.conf state=absent
-  when: mesos_role == "slave"
+  changed_when: false
 
 - name: Mesos master script
   template: src=mesos-master.j2 dest=/etc/init/mesos-master.conf
@@ -78,6 +84,5 @@
 
 - name: Mesos slave script
   template: src=mesos-slave.j2 dest=/etc/init/mesos-slave.conf
-  when: mesos_role == "slave"
   notify:
     - Restart mesos-slave
