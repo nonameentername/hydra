@@ -27,38 +27,16 @@
   - python-setuptools
   - zookeeperd
 
-- name: check for zookeeper
-  shell: cat /var/lib/zookeeper/myid
-  register: zookeeper
-  changed_when: false
+- name: Mesos default config file
+  template: src=mesos.j2 dest=/etc/default/mesos
 
-- debug: msg="{{zookeeper.stdout}}"
+- name: check for zookeeper
+  stat: path=/var/lib/zookeeper/myid
+  register: zookeeper
 
 - name: configure zookeeper
   shell: echo 1 | dd of=/var/lib/zookeeper/myid
-  when: zookeeper.stdout != "1"
-
-- name: Docker service
-  service: name=docker pattern=/usr/bin/docker state=started
-
-- name: Check for docker image
-  shell: docker images | grep "libmesos/ubuntu" | awk '{print $1}' | head -n 1
-  register: image
-  changed_when: false
-
-- name: Pull docker image
-  shell: docker pull libmesos/ubuntu
-  environment:
-    PATH: /root/.pyenv/shims:/root/.pyenv/bin:{{ansible_env.PATH}}
-  when: image.stdout != "libmesos/ubuntu"
-
-- name: Check mesos-master directory
-  stat: path=/etc/mesos-master
-  register: mesos_master
-
-- name: Create mesos-master directory
-  file: path=/etc/mesos-master state=directory
-  when: mesos_master.stat.exists == false
+  when: zookeeper.stat.exists == false
 
 - name: Check registry
   stat: path=/etc/mesos-master/registry
@@ -67,14 +45,6 @@
 - name: Configure mesos
   shell: echo in_memory | dd of=/etc/mesos-master/registry
   when: registry.stat.exists == false
-
-- name: Check mesos-slave directory
-  stat: path=/etc/mesos-slave
-  register: mesos_slave
-
-- name: Create mesos-slave directory
-  file: path=/etc/mesos-slave state=directory
-  when: mesos_slave.stat.exists == false
 
 - name: Check containerizer_path
   stat: path=/etc/mesos-slave/containerizer_path
@@ -92,10 +62,22 @@
   shell: echo external | tee /etc/mesos-slave/isolation
   when: isolation.stat.exists == false
 
-- name: Ensure all services have started
-  service: name="{{item}}" state=started
-  with_items:
-    - zookeeper
-    - marathon
-    - mesos-master
-    - mesos-slave
+- name: Delete master script
+  file: path=/etc/init/mesos-master.conf state=absent
+  when: mesos_role == "master"
+
+- name: Delete slave script
+  file: path=/etc/init/mesos-slave.conf state=absent
+  when: mesos_role == "slave"
+
+- name: Mesos master script
+  template: src=mesos-master.j2 dest=/etc/init/mesos-master.conf
+  when: mesos_role == "master"
+  notify:
+    - Restart mesos-master
+
+- name: Mesos slave script
+  template: src=mesos-slave.j2 dest=/etc/init/mesos-slave.conf
+  when: mesos_role == "slave"
+  notify:
+    - Restart mesos-slave

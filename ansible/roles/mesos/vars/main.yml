@@ -1,0 +1,12 @@
+---
+# conf file settings
+mesos_cluster_name: "mesos_cluster"
+mesos_local_addr: "{{ansible_eth1.ipv4.address}}"
+mesos_local_port: "2181"
+mesos_log_location: "/var/log/mesos"
+mesos_ulimit: "-n 8192"
+mesos_zookeepers: "zk://{{mesos_local_addr}}:{{mesos_local_port}}/mesos" # used by masters to find zookeeper
+mesos_masters: "zk://{{mesos_local_addr}}:{{mesos_local_port}}/mesos" # used by slaves
+mesos_options: "--log_dir=$LOGS"
+mesos_workdir: "/var/lib/mesos"
+mesos_quorum: "1"
